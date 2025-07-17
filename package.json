@@ -4,7 +4,8 @@
   "description": "Scrape any URL to extract .m3u8 links",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js"
+    "start": "node index.js",
+    "postinstall": "npx playwright install chromium"
   },
   "dependencies": {
     "axios": "^1.6.0",
