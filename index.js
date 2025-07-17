@@ -28,7 +28,7 @@ app.get("/extraer-estatico", async (req, res) => {
   }
 });
 
-// --- Scraping dinámico con Playwright para FlixHQ / iframes ---
+// --- Scraping dinámico con Playwright para páginas con JS/iframes ---
 app.get("/extraer-m3u8", async (req, res) => {
   const { url } = req.query;
   if (!url) return res.status(400).json({ status: "error", message: "URL no proporcionada" });
@@ -43,7 +43,7 @@ app.get("/extraer-m3u8", async (req, res) => {
     const page = await context.newPage();
     const collected = new Set();
 
-    page.on("response", response => {
+    page.on("response", (response) => {
       const u = response.url();
       if (u.includes(".m3u8")) collected.add(u);
     });
@@ -60,7 +60,7 @@ app.get("/extraer-m3u8", async (req, res) => {
       await page.goto(iframeSrc, { waitUntil: "networkidle" });
     }
 
-    // Esperar algo de tiempo para capturar las URLs
+    // Esperar 10s para capturar URLs m3u8
     await page.waitForTimeout(10000);
 
     await browser.close();
@@ -75,7 +75,7 @@ app.get("/extraer-m3u8", async (req, res) => {
   }
 });
 
-// --- Ruta raíz ---
+// Ruta raíz
 app.get("/", (req, res) => {
   res.send("✅ API funcionando. Usa:\n • /extraer-estatico?url=...\n • /extraer-m3u8?url=...");
 });
