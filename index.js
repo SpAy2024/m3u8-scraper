@@ -39,41 +39,49 @@ app.get("/extraer-m3u8", async (req, res) => {
       headless: true,
       args: ["--no-sandbox", "--disable-dev-shm-usage"],
     });
+
     const context = await browser.newContext();
     const page = await context.newPage();
     const collected = new Set();
 
+    // Escucha las respuestas de red
     page.on("response", (response) => {
       const u = response.url();
       if (u.includes(".m3u8")) collected.add(u);
     });
 
+    // Navega al blog
     await page.goto(url, { waitUntil: "networkidle" });
+    await page.waitForTimeout(3000); // da tiempo para que cargue
 
-    // Intentar detectar iframe embed
-    const iframeSrc = await page.evaluate(() => {
-      const ifr = document.querySelector("iframe");
-      return ifr?.src || null;
-    });
+    // Busca TODOS los iframes en la página
+    const iframeSrcs = await page.evaluate(() =>
+      Array.from(document.querySelectorAll("iframe")).map((ifr) => ifr.src)
+    );
 
-    if (iframeSrc) {
-      await page.goto(iframeSrc, { waitUntil: "networkidle" });
+    // Visita cada iframe si existe
+    for (const iframeUrl of iframeSrcs) {
+      try {
+        await page.goto(iframeUrl, { waitUntil: "networkidle" });
+        await page.waitForTimeout(5000); // espera en iframe
+      } catch (e) {
+        console.warn(`No se pudo cargar iframe: ${iframeUrl}`);
+      }
     }
-
-    // Esperar 10s para capturar URLs m3u8
-    await page.waitForTimeout(10000);
 
     await browser.close();
 
     if (collected.size > 0) {
       return res.json({ status: "success", m3u8: Array.from(collected) });
+    } else {
+      return res.status(404).json({ status: "error", message: "No se encontró la URL .m3u8" });
     }
-    return res.status(404).json({ status: "error", message: "No se encontró la URL .m3u8" });
   } catch (err) {
     if (browser) await browser.close();
     return res.status(500).json({ status: "error", message: err.message });
   }
 });
+
 
 // Ruta raíz
 app.get("/", (req, res) => {
